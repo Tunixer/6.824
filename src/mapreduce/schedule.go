@@ -47,5 +47,6 @@ func (mr *Master) schedule(phase jobPhase) {
 		}(TaskArg)
 	}
 	wg.Wait()
+	
 	fmt.Printf("Schedule: %v phase done\n", phase)
 }
