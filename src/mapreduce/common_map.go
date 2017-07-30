@@ -2,17 +2,22 @@ package mapreduce
 
 import (
 	"hash/fnv"
+	"io/ioutil"
+	"log"
+	"encoding/json"
+	"os"
 )
 
 // doMap does the job of a map worker: it reads one of the input files
 // (inFile), calls the user-defined map function (mapF) for that file's
 // contents, and partitions the output into nReduce intermediate files.
+
 func doMap(
-	jobName string, // the name of the MapReduce job
-	mapTaskNumber int, // which map task this is
-	inFile string,
-	nReduce int, // the number of reduce task that will be run ("R" in the paper)
-	mapF func(file string, contents string) []KeyValue,
+jobName string, // the name of the MapReduce job
+mapTaskNumber int, // which map task this is
+inFile string,
+nReduce int, // the number of reduce task that will be run ("R" in the paper)
+mapF func(file string, contents string) []KeyValue,
 ) {
 	// TODO:
 	// You will need to write this function.
@@ -40,6 +45,26 @@ func doMap(
 	//     err := enc.Encode(&kv)
 	//
 	// Remember to close the file after you have written all the values!
+
+	inFileData, err := ioutil.ReadFile(inFile)
+	if err != nil {
+		log.Fatal("Map Read InFile Error: ", err)
+	}
+
+	kvPairs := mapF(inFile,string(inFileData))
+
+	ReduceFile := make([]*os.File, nReduce)
+	optEncoder := make([]*json.Encoder, nReduce)
+	for i := 0 ; i<nReduce ; i++ {
+		ReduceFile[i],_ = os.Create(reduceName(jobName, mapTaskNumber, i))
+		optEncoder[i] = json.NewEncoder(ReduceFile[i])
+		defer ReduceFile[i].Close()
+	}
+
+	for _, kvp := range kvPairs{
+		reduceNum := int(ihash(kvp.Key)) % nReduce
+		err = optEncoder[reduceNum].Encode(kvp)
+	}
 }
 
 func ihash(s string) uint32 {

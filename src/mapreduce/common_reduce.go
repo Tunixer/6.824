@@ -1,5 +1,25 @@
 package mapreduce
 
+import (
+	"encoding/json"
+	"os"
+	"sort"
+)
+
+type ArrOfKV []KeyValue
+
+func (D ArrOfKV) Len() int{
+	return len(D)
+}
+
+func (D ArrOfKV) Swap(i, j int){
+	D[i], D[j] = D[j], D[i]
+}
+
+func (D ArrOfKV) Less(i, j int) bool {
+	return D[i].Key<D[j].Key
+}
+
 // doReduce does the job of a reduce worker: it reads the intermediate
 // key/value pairs (produced by the map phase) for this task, sorts the
 // intermediate key/value pairs by key, calls the user-defined reduce function
@@ -31,4 +51,38 @@ func doReduce(
 	// 	enc.Encode(KeyValue{key, reduceF(...)})
 	// }
 	// file.Close()
+	var kvPairs []KeyValue
+	var temp KeyValue
+	for i := 0 ; i < nMap ; i++{
+		ItmFile, _ := os.Open(reduceName(jobName, i, reduceTaskNumber))
+		dec := json.NewDecoder(ItmFile)
+		err := dec.Decode(&temp)
+		kvPairs = append(kvPairs, temp)
+		for err == nil {
+			err = dec.Decode(&temp)
+			kvPairs = append(kvPairs, temp)			
+		}
+		ItmFile.Close()
+	}
+
+	sort.Sort(ArrOfKV(kvPairs))
+
+	var arr_str []string
+	var arr_key []string
+	for _, kv := range kvPairs{
+		arr_key = append(arr_key, kv.Key)
+		arr_str = append(arr_str, kv.Value)
+	}
+
+	mergeFile, _ := os.Create(mergeName(jobName, reduceTaskNumber))
+	enc := json.NewEncoder(mergeFile)
+	j := 0
+	for i := 1 ;i < len(arr_key) ; i++ {
+		if arr_key[i] != arr_key[i-1]{
+			enc.Encode(KeyValue{arr_key[j], reduceF(arr_key[j],arr_str[j:i])})
+			j = i
+		}
+	}
+	enc.Encode(KeyValue{arr_key[j], reduceF(arr_key[j],arr_str[j:])})
+	mergeFile.Close()
 }
