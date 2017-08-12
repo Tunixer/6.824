@@ -388,6 +388,7 @@ func (rf *Raft) Loop(){
 				if rf.GetStt() != "leader"{
 					rf.mu.Lock()
 					rf.State = "candidate"
+					rf.currentTerm += 1
 					rf.mu.Unlock()
 				}
 			}
@@ -396,9 +397,6 @@ func (rf *Raft) Loop(){
 		case "leader":
 			rf.LeaderRt()
 		}
-		rf.mu.Lock()
-		rf.currentTerm += 1
-		rf.mu.Unlock()
 	}
 }
 
@@ -430,7 +428,7 @@ func (rf *Raft) CandidateRt(){
 		return
 	case <- time.After(666* time.Millisecond):
 		if rf.State != "leader" {
-			rf.State = "follower"
+			rf.currentTerm += 1
 		}
 		return
 	}
@@ -438,6 +436,7 @@ func (rf *Raft) CandidateRt(){
 
 func (rf *Raft) LeaderRt(){
 	time.Sleep(10 * time.Millisecond)
+//	fmt.Printf("Leader is %v at Term %v\n", rf.me, rf.currentTerm)
 	var args AppendEntriesArgs
 	args.LeaderId = rf.me
 	args.Term = rf.GetCurrTerm()
@@ -449,7 +448,8 @@ func (rf *Raft) LeaderRt(){
 	}
 
 	select{
-	case <-rf.OutOfTimeCh:
+	case <- rf.OutOfTimeCh:
+	case <- time.After(555* time.Millisecond):
 	}
 }
 
