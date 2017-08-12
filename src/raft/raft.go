@@ -1,3 +1,4 @@
+//Lab 2A finished 2017/8/12
 package raft
 
 //
