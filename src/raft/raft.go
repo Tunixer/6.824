@@ -17,8 +17,13 @@ package raft
 //   in the same server.
 //
 
-import "sync"
-import "labrpc"
+import(
+	"sync"
+	"labrpc"
+	"time"
+	"math/rand"
+	"fmt"
+)
 
 // import "bytes"
 // import "encoding/gob"
@@ -37,19 +42,42 @@ type ApplyMsg struct {
 	Snapshot    []byte // ignore for lab2; only used in lab3
 }
 
+
+type Entry struct{
+	Index int
+	term int
+	Command interface{}
+}
 //
 // A Go object implementing a single Raft peer.
 //
 type Raft struct {
-	mu        sync.Mutex
-	peers     []*labrpc.ClientEnd
-	persister *Persister
-	me        int // index into peers[]
+	mu        sync.Mutex          // Lock to protect shared access to this peer's state
+	peers     []*labrpc.ClientEnd // RPC end points of all peers
+	persister *Persister          // Object to hold this peer's persisted state
+	me        int                 // this peer's index into peers[]
 
-	// Your data here.
+	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
+	//Persistent state
+	State       string
+	currentTerm int
+	votedFor    int
+	voteCount   int
+	log         []Entry
 
+	//Volatile State
+	cmtIndex    int//commited index
+	lastApplied int
+
+	//Volatile State on Leaders
+	nextIndex   []int
+	matchIndex  []int
+
+	heartbeatCh chan bool
+	BecomeLeader chan bool
+	OutOfTimeCh chan int
 }
 
 // return currentTerm and whether this server
@@ -58,17 +86,38 @@ func (rf *Raft) GetState() (int, bool) {
 
 	var term int
 	var isleader bool
-	// Your code here.
+	// Your code here (2A).
+	rf.mu.Lock()
+	term = rf.currentTerm
+	if rf.State == "leader"{
+		isleader = true
+	} else {
+		isleader = false
+	}
+	rf.mu.Unlock()
 	return term, isleader
 }
 
+func (rf *Raft) GetCurrTerm() int {
+	rf.mu.Lock()
+	term := rf.currentTerm
+	rf.mu.Unlock()
+	return term
+}
+
+func (rf *Raft) GetStt() string {
+	rf.mu.Lock()
+	stt := rf.State
+	rf.mu.Unlock()
+	return stt
+}
 //
 // save Raft's persistent state to stable storage,
 // where it can later be retrieved after a crash and restart.
 // see paper's Figure 2 for a description of what should be persistent.
 //
 func (rf *Raft) persist() {
-	// Your code here.
+	// Your code here (2C).
 	// Example:
 	// w := new(bytes.Buffer)
 	// e := gob.NewEncoder(w)
@@ -82,36 +131,144 @@ func (rf *Raft) persist() {
 // restore previously persisted state.
 //
 func (rf *Raft) readPersist(data []byte) {
-	// Your code here.
+	// Your code here (2C).
 	// Example:
 	// r := bytes.NewBuffer(data)
 	// d := gob.NewDecoder(r)
 	// d.Decode(&rf.xxx)
 	// d.Decode(&rf.yyy)
+	if data == nil || len(data) < 1 { // bootstrap without any state?
+		return
+	}
 }
-
-
-
 
 //
 // example RequestVote RPC arguments structure.
+// field names must start with capital letters!
 //
 type RequestVoteArgs struct {
-	// Your data here.
+	// Your data here (2A, 2B).
+	term int
+	candidateId int
+	lastLogIndex int
+	lastLogTerm int
 }
 
 //
 // example RequestVote RPC reply structure.
+// field names must start with capital letters!
 //
 type RequestVoteReply struct {
-	// Your data here.
+	// Your data here (2A).
+	term int
+	voteGranted bool
 }
 
 //
 // example RequestVote RPC handler.
 //
+type AppendEntriesArgs struct {
+	term int //Leader's term
+	leaderId int //Used by followers to redirect clients
+	prevLogIndex int
+	prevLogTerm int
+	entries[] Entry
+	leaderCommit int
+}
+
+type AppendEntriesReply struct{
+	term int
+	success bool
+}
+
+func (rf *Raft) IsOutOfTime(thisTerm int) (bool,bool){
+	currTerm := rf.GetCurrTerm()
+	if currTerm < thisTerm {
+		go func(){
+			if rf.GetCurrTerm() < thisTerm {
+				rf.OutOfTimeCh <- thisTerm
+			}
+		}()
+		rf.mu.Lock()
+		rf.State = "follower"
+		rf.currentTerm = thisTerm
+		rf.votedFor = -1
+		rf.voteCount = 0
+		rf.mu.Unlock()
+		return true, false
+	} else if currTerm == thisTerm {
+		return false, false
+	} else {
+		return false, true
+	}
+}
+
+
+//true if Log1 is more up-to-date than Log2
+func IsUptoDate(idx1 int, term1 int, idx2 int, term2 int) bool {
+	res := false
+	if (term1 > term2){
+		res = true
+	}
+	if (term1 == term2) && (idx1 > idx2){
+		res = true
+	}
+	return res
+}
+
 func (rf *Raft) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) {
-	// Your code here.
+	// Your code here (2A, 2B).
+	fmt.Printf("%v\n",args)
+	oot, _ := rf.IsOutOfTime(args.term)
+	if oot {
+	}
+
+	rf.mu.Lock()
+	currTerm := rf.currentTerm
+	currIdx := len(rf.log) - 1
+	rf.mu.Unlock()
+
+	fmt.Printf("Term: %v\n",args.term)
+	temp_state := rf.GetStt()
+	reply.term = currTerm
+	switch temp_state {
+	case "leader","candidade":
+		reply.term = currTerm
+		reply.voteGranted = false
+		return
+	case "follower":
+		rf.mu.Lock()
+		if args.term < currTerm{
+			reply.term = currTerm
+			reply.voteGranted = false
+			return
+		}
+		cdt1 := (rf.votedFor == -1) || (rf.votedFor == args.candidateId) 
+		cdt2 := IsUptoDate(currIdx, rf.log[currIdx].term, args.lastLogIndex, args.lastLogTerm)
+		if cdt1 && !cdt2 {
+			reply.term = currTerm
+			reply.voteGranted = true
+			fmt.Printf("reply.term: %v\n",reply.term)
+			rf.votedFor = args.candidateId
+			return
+		} else{
+			reply.term = currTerm
+			reply.voteGranted = false
+			return		
+		}
+		rf.mu.Unlock()
+	}
+}
+
+func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+	oot1, _ := rf.IsOutOfTime(args.term)
+	if oot1 {
+		reply.term = rf.GetCurrTerm()
+		return
+	}
+	rf.heartbeatCh <- true
+	reply.term = rf.GetCurrTerm()
+	return
 }
 
 //
@@ -124,18 +281,51 @@ func (rf *Raft) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) {
 // the same as the types of the arguments declared in the
 // handler function (including whether they are pointers).
 //
-// returns true if labrpc says the RPC was delivered.
+// The labrpc package simulates a lossy network, in which servers
+// may be unreachable, and in which requests and replies may be lost.
+// Call() sends a request and waits for a reply. If a reply arrives
+// within a timeout interval, Call() returns true; otherwise
+// Call() returns false. Thus Call() may not return for a while.
+// A false return can be caused by a dead server, a live server that
+// can't be reached, a lost request, or a lost reply.
+//
+// Call() is guaranteed to return (perhaps after a delay) *except* if the
+// handler function on the server side does not return.  Thus there
+// is no need to implement your own timeouts around Call().
+//
+// look at the comments in ../labrpc/labrpc.go for more details.
 //
 // if you're having trouble getting RPC to work, check that you've
 // capitalized all field names in structs passed over RPC, and
 // that the caller passes the address of the reply struct with &, not
 // the struct itself.
 //
-func (rf *Raft) sendRequestVote(server int, args RequestVoteArgs, reply *RequestVoteReply) bool {
-	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
+func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
+  	fmt.Printf("Sent to: %v\n",args)
+
+	ok := rf.peers[server].Call("Raft.RequestVote", *args, reply)
+	fmt.Printf("%11v\n",reply.term)
+	if ok {
+		if reply.voteGranted{
+			rf.mu.Lock()
+			rf.voteCount += 1
+			if rf.State == "candidate" && rf.voteCount > len(rf.peers)/2 {
+				rf.BecomeLeader <- true
+			}
+			rf.mu.Unlock()
+		}
+		rf.IsOutOfTime(reply.term)
+	}
 	return ok
 }
 
+func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+ 	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
+ 	if ok{
+ 		rf.IsOutOfTime(reply.term)
+ 	}
+ 	return ok
+}
 
 //
 // the service using Raft (e.g. a k/v server) wants to start
@@ -154,6 +344,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index := -1
 	term := -1
 	isLeader := true
+
+	// Your code here (2B).
 
 
 	return index, term, isLeader
@@ -180,18 +372,106 @@ func (rf *Raft) Kill() {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
+
+func ElectTimeOut() int {
+	res := rand.Intn(300) + 800
+	return res
+}
+
+func (rf *Raft) Loop(){
+	TimeOutCon := 0
+	for {
+		TimeOutCon = ElectTimeOut()
+		switch rf.GetStt(){
+		case "follower":
+			select{
+			case <- rf.heartbeatCh:
+			case <- time.After(time.Duration(TimeOutCon) * time.Millisecond):
+				if rf.GetStt() != "leader"{
+					rf.mu.Lock()
+					rf.State = "candidate"
+					rf.mu.Unlock()
+				}
+			}
+		case "candidate":
+			rf.CandidateRt()//candidate routine
+		case "leader":
+			rf.LeaderRt()
+		}
+		rf.mu.Lock()
+		rf.currentTerm += 1
+		rf.mu.Unlock()
+	}
+}
+
+func (rf *Raft) CandidateRt(){
+	time.Sleep(17 * time.Millisecond)
+
+	rf.mu.Lock()
+	rf.votedFor = rf.me
+	rf.voteCount = 1
+	rf.mu.Unlock()
+	var args RequestVoteArgs
+	rf.mu.Lock()
+	args.candidateId = rf.me
+	args.term = rf.currentTerm
+	args.lastLogIndex = len(rf.log)-1
+	args.lastLogTerm = rf.log[args.lastLogIndex].term
+	rf.mu.Unlock()
+	for k, _ := range rf.peers{
+		if k!= rf.me && rf.GetStt() == "candidate"{
+			var reply RequestVoteReply
+			go rf.sendRequestVote(k, &args, &reply)
+		}
+	}
+	select{
+	case <- rf.BecomeLeader:
+		rf.mu.Lock()
+		rf.State = "leader"
+		rf.mu.Unlock()
+		return
+	case <- time.After(666* time.Millisecond):
+		if rf.State != "leader" {
+			rf.State = "follower"
+		}
+		return
+	}
+}
+
+func (rf *Raft) LeaderRt(){
+	time.Sleep(10 * time.Millisecond)
+	var args AppendEntriesArgs
+	args.leaderId = rf.me
+	args.term = rf.GetCurrTerm()
+	for k, _ := range rf.peers{
+		if k!= rf.me && rf.GetStt() == "leader"{
+			var reply AppendEntriesReply
+			go rf.sendAppendEntries(k, &args, &reply)
+		}
+	}
+
+	select{
+	case <-rf.OutOfTimeCh:
+	}
+}
+
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
-
-	// Your initialization code here.
+	rf.State = "follower"
+	rf.votedFor = -1
+	rf.currentTerm = 0
+	rf.heartbeatCh = make(chan bool)
+	rf.BecomeLeader = make(chan bool)
+	rf.log = append(rf.log,Entry{0,0,nil})
+	// Your initialization code here (2A, 2B, 2C).
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 
-
+	go rf.Loop()
 	return rf
 }

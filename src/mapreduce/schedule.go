@@ -47,6 +47,5 @@ func (mr *Master) schedule(phase jobPhase) {
 		}(TaskArg)
 	}
 	wg.Wait()
-	<- mr.registerChannel
 	fmt.Printf("Schedule: %v phase done\n", phase)
 }
