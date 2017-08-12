@@ -22,7 +22,7 @@ import(
 	"labrpc"
 	"time"
 	"math/rand"
-	"fmt"
+//	"fmt"
 )
 
 // import "bytes"
@@ -52,7 +52,7 @@ type Entry struct{
 // A Go object implementing a single Raft peer.
 //
 type Raft struct {
-	mu        sync.Mutex          // Lock to protect shared access to this peer's state
+	mu        sync.RWMutex          // Lock to protect shared access to this peer's state
 	peers     []*labrpc.ClientEnd // RPC end points of all peers
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
@@ -87,28 +87,28 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
-	rf.mu.Lock()
+	rf.mu.RLock()
 	term = rf.currentTerm
 	if rf.State == "leader"{
 		isleader = true
 	} else {
 		isleader = false
 	}
-	rf.mu.Unlock()
+	rf.mu.RUnlock()
 	return term, isleader
 }
 
 func (rf *Raft) GetCurrTerm() int {
-	rf.mu.Lock()
+	rf.mu.RLock()
 	term := rf.currentTerm
-	rf.mu.Unlock()
+	rf.mu.RUnlock()
 	return term
 }
 
 func (rf *Raft) GetStt() string {
-	rf.mu.Lock()
+	rf.mu.RLock()
 	stt := rf.State
-	rf.mu.Unlock()
+	rf.mu.RUnlock()
 	return stt
 }
 //
@@ -148,10 +148,10 @@ func (rf *Raft) readPersist(data []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
-	term int
-	candidateId int
-	lastLogIndex int
-	lastLogTerm int
+	Term int
+	CandidateId int
+	LastLogIndex int
+	LastLogTerm int
 }
 
 //
@@ -160,25 +160,25 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
-	term int
-	voteGranted bool
+	Term int
+	VoteGranted bool
 }
 
 //
 // example RequestVote RPC handler.
 //
 type AppendEntriesArgs struct {
-	term int //Leader's term
-	leaderId int //Used by followers to redirect clients
-	prevLogIndex int
-	prevLogTerm int
-	entries[] Entry
-	leaderCommit int
+	Term int //Leader's term
+	LeaderId int //Used by followers to redirect clients
+	PrevLogIndex int
+	PrevLogTerm int
+	Entries[] Entry
+	LeaderCommit int
 }
 
 type AppendEntriesReply struct{
-	term int
-	success bool
+	Term int
+	Success bool
 }
 
 func (rf *Raft) IsOutOfTime(thisTerm int) (bool,bool){
@@ -218,56 +218,55 @@ func IsUptoDate(idx1 int, term1 int, idx2 int, term2 int) bool {
 
 func (rf *Raft) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-	fmt.Printf("%v\n",args)
-	oot, _ := rf.IsOutOfTime(args.term)
+	oot, _ := rf.IsOutOfTime(args.Term)
 	if oot {
 	}
 
-	rf.mu.Lock()
+	rf.mu.RLock()
 	currTerm := rf.currentTerm
 	currIdx := len(rf.log) - 1
-	rf.mu.Unlock()
+	rf.mu.RUnlock()
 
-	fmt.Printf("Term: %v\n",args.term)
 	temp_state := rf.GetStt()
-	reply.term = currTerm
+	reply.Term = currTerm
 	switch temp_state {
 	case "leader","candidade":
-		reply.term = currTerm
-		reply.voteGranted = false
+		reply.Term = currTerm
+		reply.VoteGranted = false
 		return
 	case "follower":
-		rf.mu.Lock()
-		if args.term < currTerm{
-			reply.term = currTerm
-			reply.voteGranted = false
+		if args.Term < currTerm{
+			reply.Term = currTerm
+			reply.VoteGranted = false
 			return
 		}
-		cdt1 := (rf.votedFor == -1) || (rf.votedFor == args.candidateId) 
-		cdt2 := IsUptoDate(currIdx, rf.log[currIdx].term, args.lastLogIndex, args.lastLogTerm)
+		rf.mu.RLock()
+		cdt1 := (rf.votedFor == -1) || (rf.votedFor == args.CandidateId) 
+		cdt2 := IsUptoDate(currIdx, rf.log[currIdx].term, args.LastLogIndex, args.LastLogTerm)
+		rf.mu.RUnlock()
 		if cdt1 && !cdt2 {
-			reply.term = currTerm
-			reply.voteGranted = true
-			fmt.Printf("reply.term: %v\n",reply.term)
-			rf.votedFor = args.candidateId
+			reply.Term = currTerm
+			reply.VoteGranted = true
+			rf.mu.Lock()
+			rf.votedFor = args.CandidateId
+			rf.mu.Unlock()
 			return
 		} else{
-			reply.term = currTerm
-			reply.voteGranted = false
+			reply.Term = currTerm
+			reply.VoteGranted = false
 			return		
 		}
-		rf.mu.Unlock()
 	}
 }
 
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
-	oot1, _ := rf.IsOutOfTime(args.term)
+	oot1, _ := rf.IsOutOfTime(args.Term)
 	if oot1 {
-		reply.term = rf.GetCurrTerm()
+		reply.Term = rf.GetCurrTerm()
 		return
 	}
 	rf.heartbeatCh <- true
-	reply.term = rf.GetCurrTerm()
+	reply.Term = rf.GetCurrTerm()
 	return
 }
 
@@ -301,12 +300,10 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 // the struct itself.
 //
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
-  	fmt.Printf("Sent to: %v\n",args)
 
 	ok := rf.peers[server].Call("Raft.RequestVote", *args, reply)
-	fmt.Printf("%11v\n",reply.term)
 	if ok {
-		if reply.voteGranted{
+		if reply.VoteGranted{
 			rf.mu.Lock()
 			rf.voteCount += 1
 			if rf.State == "candidate" && rf.voteCount > len(rf.peers)/2 {
@@ -314,7 +311,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			}
 			rf.mu.Unlock()
 		}
-		rf.IsOutOfTime(reply.term)
+		rf.IsOutOfTime(reply.Term)
 	}
 	return ok
 }
@@ -322,7 +319,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
  	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
  	if ok{
- 		rf.IsOutOfTime(reply.term)
+ 		rf.IsOutOfTime(reply.Term)
  	}
  	return ok
 }
@@ -412,12 +409,12 @@ func (rf *Raft) CandidateRt(){
 	rf.voteCount = 1
 	rf.mu.Unlock()
 	var args RequestVoteArgs
-	rf.mu.Lock()
-	args.candidateId = rf.me
-	args.term = rf.currentTerm
-	args.lastLogIndex = len(rf.log)-1
-	args.lastLogTerm = rf.log[args.lastLogIndex].term
-	rf.mu.Unlock()
+	rf.mu.RLock()
+	args.CandidateId = rf.me
+	args.Term = rf.currentTerm
+	args.LastLogIndex = len(rf.log)-1
+	args.LastLogTerm = rf.log[args.LastLogIndex].term
+	rf.mu.RUnlock()
 	for k, _ := range rf.peers{
 		if k!= rf.me && rf.GetStt() == "candidate"{
 			var reply RequestVoteReply
@@ -441,8 +438,8 @@ func (rf *Raft) CandidateRt(){
 func (rf *Raft) LeaderRt(){
 	time.Sleep(10 * time.Millisecond)
 	var args AppendEntriesArgs
-	args.leaderId = rf.me
-	args.term = rf.GetCurrTerm()
+	args.LeaderId = rf.me
+	args.Term = rf.GetCurrTerm()
 	for k, _ := range rf.peers{
 		if k!= rf.me && rf.GetStt() == "leader"{
 			var reply AppendEntriesReply
