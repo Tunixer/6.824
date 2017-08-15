@@ -445,13 +445,13 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index := -1
 	term := -1
 	isLeader := true
-
 	// Your code here (2B).
 	if rf.GetStt() == "leader"{
 		var appmu sync.RWMutex 
 		appEntries := Entry{Term :rf.GetCurrTerm(),Command:command}
 		term = appEntries.Term
 		rf.mu.Lock()
+		fmt.Printf("Leader %v Receive Client's Req:%v in Term:%v\n",rf.me,command,rf.currentTerm)
 		rf.log = append(rf.log, appEntries)
 		appCount := 1
 		index = len(rf.log)-1
@@ -466,8 +466,9 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 						appmu.Lock()
 						appCount += 1
 						if appCount == len(rf.peers)/2+1{
-							fmt.Printf("Leader %v commit Index %v to all Follower\n",rf.me,index)
-							rf.cmtIndex+=1
+							rf.cmtIndex = index
+							fmt.Printf("Leader %v commit Index %v to all Follower in Term %v, And CommitIdx is %v\n",
+								rf.me,index,rf.currentTerm,rf.cmtIndex)
 							rf.CommitCh <- rf.cmtIndex
 						}
 						appmu.Unlock()
@@ -506,7 +507,7 @@ func (rf *Raft) Kill() {
 //
 
 func ElectTimeOut() int {
-	res := rand.Intn(300) + 800
+	res := rand.Intn(50) + 300
 	return res
 }
 
@@ -535,7 +536,7 @@ func (rf *Raft) Loop(){
 }
 
 func (rf *Raft) CandidateRt(){
-	time.Sleep(17 * time.Millisecond)
+//	time.Sleep(10 * time.Millisecond)
 
 	rf.mu.Lock()
 	rf.votedFor = rf.me
@@ -573,7 +574,7 @@ func (rf *Raft) CandidateRt(){
 }
 
 func (rf *Raft) LeaderRt(){
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(17 * time.Millisecond)
 //	fmt.Printf("Leader is %v at Term %v\n", rf.me, rf.currentTerm)
 	var args AppendEntriesArgs
 	args.LeaderId = rf.me
@@ -627,7 +628,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.votedFor = -1
 	rf.currentTerm = 0
 	rf.lastApplied = 0
-	rf.cmtIndex = 1
+	rf.cmtIndex = 0
 	rf.heartbeatCh = make(chan bool)
 	rf.BecomeLeader = make(chan bool)
 	rf.CommitCh = make(chan int)
