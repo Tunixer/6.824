@@ -453,7 +453,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		term = appEntries.Term
 		rf.mu.Lock()
 		rf.log = append(rf.log, appEntries)
-		appCount := 0
+		appCount := 1
 		index = len(rf.log)-1
 		rf.mu.Unlock()
 
