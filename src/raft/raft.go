@@ -450,32 +450,35 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		var appmu sync.RWMutex 
 		appEntries := Entry{Term :rf.GetCurrTerm(),Command:command}
 		term = appEntries.Term
-		rf.mu.Lock()
 		fmt.Printf("Leader %v Receive Client's Req:%v in Term:%v\n",rf.me,command,rf.currentTerm)
 		rf.log = append(rf.log, appEntries)
 		appCount := 1
 		index = len(rf.log)-1
-		rf.mu.Unlock()
+		if rf.State == "leader"{
+			go func(){
+				for k,_ := range rf.peers{
+					if k != rf.me {
+						go func(k int){
+							ok := rf.DispatchAppendEntries(k, index)
+							//fmt.Printf("Leader %v commit Index %v to Follower %v,%t\n",rf.me,index,k,ok)
+							if ok {
+								appmu.Lock()
+								appCount += 1
+								if appCount == len(rf.peers)/2+1{
+									rf.cmtIndex = index
+									fmt.Printf("Leader %v commit Index %v to all Follower in Term %v, And CommitIdx is %v\n",
+										rf.me,index,rf.currentTerm,rf.cmtIndex)
+									rf.CommitCh <- rf.cmtIndex
+								}
+								appmu.Unlock()
+							}
+						}(k)
 
-		for k,_ := range rf.peers{
-			if k != rf.me {
-				go func(k int){
-					ok := rf.DispatchAppendEntries(k, index)
-					//fmt.Printf("Leader %v commit Index %v to Follower %v,%t\n",rf.me,index,k,ok)
-					if ok {
-						appmu.Lock()
-						appCount += 1
-						if appCount == len(rf.peers)/2+1{
-							rf.cmtIndex = index
-							fmt.Printf("Leader %v commit Index %v to all Follower in Term %v, And CommitIdx is %v\n",
-								rf.me,index,rf.currentTerm,rf.cmtIndex)
-							rf.CommitCh <- rf.cmtIndex
-						}
-						appmu.Unlock()
 					}
-				}(k)
-
-			}
+				}
+			}()
+		} else{
+			isLeader = false
 		}
 	} else {
 		isLeader = false
@@ -514,6 +517,7 @@ func ElectTimeOut() int {
 func (rf *Raft) Loop(){
 	TimeOutCon := 0
 	for {
+		//fmt.Println("卡死了")
 		TimeOutCon = ElectTimeOut()
 		switch rf.GetStt(){
 		case "follower":
@@ -537,11 +541,10 @@ func (rf *Raft) Loop(){
 
 func (rf *Raft) CandidateRt(){
 //	time.Sleep(10 * time.Millisecond)
-
-	rf.mu.Lock()
+	TimeOutCon := ElectTimeOut()
 	rf.votedFor = rf.me
 	rf.voteCount = 1
-	rf.mu.Unlock()
+
 	var args RequestVoteArgs
 	rf.mu.RLock()
 	args.CandidateId = rf.me
@@ -565,7 +568,7 @@ func (rf *Raft) CandidateRt(){
 		rf.mu.Unlock()
 		
 		return
-	case <- time.After(666* time.Millisecond):
+	case <- time.After((time.Duration(TimeOutCon)) * time.Millisecond):
 		if rf.State != "leader" {
 			rf.currentTerm += 1
 		}
@@ -574,8 +577,8 @@ func (rf *Raft) CandidateRt(){
 }
 
 func (rf *Raft) LeaderRt(){
-	time.Sleep(17 * time.Millisecond)
 //	fmt.Printf("Leader is %v at Term %v\n", rf.me, rf.currentTerm)
+	TimeOutCon := ElectTimeOut()
 	var args AppendEntriesArgs
 	args.LeaderId = rf.me
 	args.Term = rf.GetCurrTerm()
@@ -591,7 +594,7 @@ func (rf *Raft) LeaderRt(){
 
 	select{
 	case <- rf.OutOfTimeCh:
-	case <- time.After(555* time.Millisecond):
+	case <- time.After((time.Duration(TimeOutCon))/8 * time.Millisecond):
 	}
 }
 
