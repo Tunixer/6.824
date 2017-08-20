@@ -23,7 +23,7 @@ import(
 	"labrpc"
 	"time"
 	"math/rand"
-	"fmt"
+//	"fmt"
 )
 
 // import "bytes"
@@ -53,7 +53,7 @@ type Entry struct{
 //
 type Raft struct {
 	mu        sync.RWMutex          // Lock to protect shared access to this peer's state
-
+	mucmt     sync.RWMutex 
 	peers     []*labrpc.ClientEnd // RPC end points of all peers
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
@@ -272,7 +272,15 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 		rf.heartbeatCh <- true
 		reply.Term = rf.GetCurrTerm()
 		rf.mu.Lock()
-		if rf.lastApplied < args.LeaderCommit{
+		cdt := false
+		if len(rf.log) >= args.PrevLogIndex + 1 {
+			if rf.log[args.PrevLogIndex].Term == args.PrevLogTerm{
+				cdt = true
+			}
+		}
+		if rf.lastApplied < args.LeaderCommit && cdt {
+//			fmt.Printf("%v %v 's Log %v in Term %v When HB\n rf.cmtIndex:%v args.LeaderCommit:%v\n",
+//				rf.State,rf.me,rf.log,rf.currentTerm,rf.cmtIndex,args.LeaderCommit)
 			rf.cmtIndex = args.LeaderCommit
 			go func(){
 				rf.CommitCh <- rf.cmtIndex
@@ -296,6 +304,8 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 		rf.mu.RUnlock()
 		rf.mu.Lock()
 		if cdt{
+//			fmt.Printf("%v %v 's Log %v in Term %v Before Append Entries\n",
+//				rf.State,rf.me,rf.log,rf.currentTerm)
 			if len(rf.log) == args.PrevLogIndex + 1{
 				rf.log = append(rf.log,args.Entries...)
 			}
@@ -309,7 +319,8 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 					rf.CommitCh <- rf.cmtIndex
 				}()
 			}
-//			fmt.Printf("%v Append Entries to itself, CommitIdx %v\n",rf.me,rf.cmtIndex)
+//			fmt.Printf("%v %v 's Log %v in Term %v After Append Entries From Leader %v in Term:%v\n",
+//				rf.State,rf.me,rf.log,rf.currentTerm,args.LeaderId,args.Term)
 		}
 		reply.Term = rf.currentTerm
 		reply.Success = cdt
@@ -398,6 +409,9 @@ func (rf *Raft) rectifyAppendEntries(server int,idx int) bool{
 				                       LeaderCommit: rf.cmtIndex,
 			                          }
 			rf.mu.RUnlock()
+			if rf.GetStt() != "leader"{
+				return false
+			}
 			ok := rf.sendAppendEntries(server, args, reply)
 			if ok{
 				if reply.Success == true{
@@ -416,6 +430,9 @@ func (rf *Raft) rectifyAppendEntries(server int,idx int) bool{
 		                       LeaderCommit: rf.cmtIndex,
 	                          }
 	rf.mu.RUnlock()
+	if rf.GetStt() != "leader"{
+		return false
+	}
 	ok := rf.sendAppendEntries(server, args, reply)
 	return ok
 }
@@ -431,14 +448,53 @@ func (rf *Raft) DispatchAppendEntries(server int, idx int) bool {
 		                       LeaderCommit: rf.cmtIndex,
 	                          }
 	rf.mu.RUnlock()
+	if rf.GetStt() != "leader"{
+		return false
+	}
 	ok := rf.sendAppendEntries(server, args, reply)
 	if ok{
 		if reply.Success == false{
 			req := rf.rectifyAppendEntries(server, idx)
+			if rf.GetStt() != "leader"{
+				return false
+			}
 			return req
 		}
 	}
 	return ok && reply.Success
+}
+
+func (rf *Raft) CommitLog(index int, currTerm int){
+	rf.mucmt.Lock()
+	var appmu sync.RWMutex 
+	appCount := 1
+	go func(){
+		for k,_ := range rf.peers{
+			if k != rf.me {
+				go func(k int){
+					ok := false
+					if rf.log[index].Term == currTerm && rf.nextIndex[k] != index {
+						ok = rf.DispatchAppendEntries(k, index)
+					}
+					//fmt.Printf("Leader %v commit Index %v to Follower %v,%t\n",rf.me,index,k,ok)
+					if ok && rf.GetStt() == "leader" {
+						rf.nextIndex[k] = index
+						//fmt.Printf("%v %v 's Log %v in Term %v\n",rf.State,rf.me,rf.log,rf.currentTerm)
+						appmu.Lock()
+						appCount += 1
+						if appCount == len(rf.peers)/2+1{
+							rf.cmtIndex = index
+//								fmt.Printf("Leader %v commit Index %v to all Follower in Term %v, And CommitIdx is %v\n",
+//									rf.me,index,rf.currentTerm,rf.cmtIndex)
+							rf.CommitCh <- rf.cmtIndex
+						}
+						appmu.Unlock()
+					}
+				}(k)
+			}
+		}
+	}()
+	rf.mucmt.Unlock()
 }
 
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
@@ -446,37 +502,11 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	term := -1
 	isLeader := true
 	// Your code here (2B).
-	if rf.GetStt() == "leader"{
-		var appmu sync.RWMutex 
+	if rf.State == "leader"{
 		appEntries := Entry{Term :rf.GetCurrTerm(),Command:command}
 		term = appEntries.Term
-		rf.mu.Lock()
-		fmt.Printf("Leader %v Receive Client's Req:%v in Term:%v\n",rf.me,command,rf.currentTerm)
 		rf.log = append(rf.log, appEntries)
-		appCount := 1
 		index = len(rf.log)-1
-		rf.mu.Unlock()
-
-		for k,_ := range rf.peers{
-			if k != rf.me {
-				go func(k int){
-					ok := rf.DispatchAppendEntries(k, index)
-					//fmt.Printf("Leader %v commit Index %v to Follower %v,%t\n",rf.me,index,k,ok)
-					if ok {
-						appmu.Lock()
-						appCount += 1
-						if appCount == len(rf.peers)/2+1{
-							rf.cmtIndex = index
-							fmt.Printf("Leader %v commit Index %v to all Follower in Term %v, And CommitIdx is %v\n",
-								rf.me,index,rf.currentTerm,rf.cmtIndex)
-							rf.CommitCh <- rf.cmtIndex
-						}
-						appmu.Unlock()
-					}
-				}(k)
-
-			}
-		}
 	} else {
 		isLeader = false
 	}
@@ -536,12 +566,10 @@ func (rf *Raft) Loop(){
 }
 
 func (rf *Raft) CandidateRt(){
-//	time.Sleep(10 * time.Millisecond)
-
-	rf.mu.Lock()
+	TimeOutCon := ElectTimeOut()
 	rf.votedFor = rf.me
 	rf.voteCount = 1
-	rf.mu.Unlock()
+
 	var args RequestVoteArgs
 	rf.mu.RLock()
 	args.CandidateId = rf.me
@@ -560,12 +588,12 @@ func (rf *Raft) CandidateRt(){
 		rf.mu.Lock()
 		rf.State = "leader"
 		for i:=0 ;i < len(rf.peers);i++{
-			rf.nextIndex = append(rf.nextIndex, len(rf.log))
+			rf.nextIndex = append(rf.nextIndex, -1)
 		}
 		rf.mu.Unlock()
 		
 		return
-	case <- time.After(666* time.Millisecond):
+	case <- time.After((time.Duration(TimeOutCon)) * time.Millisecond):
 		if rf.State != "leader" {
 			rf.currentTerm += 1
 		}
@@ -574,8 +602,7 @@ func (rf *Raft) CandidateRt(){
 }
 
 func (rf *Raft) LeaderRt(){
-	time.Sleep(17 * time.Millisecond)
-//	fmt.Printf("Leader is %v at Term %v\n", rf.me, rf.currentTerm)
+	TimeOutCon := ElectTimeOut()
 	var args AppendEntriesArgs
 	args.LeaderId = rf.me
 	args.Term = rf.GetCurrTerm()
@@ -584,14 +611,22 @@ func (rf *Raft) LeaderRt(){
 			var reply AppendEntriesReply
 			rf.mu.RLock()
 			args.LeaderCommit = rf.cmtIndex
+			args.PrevLogIndex = rf.cmtIndex
+			args.PrevLogTerm = rf.log[rf.cmtIndex].Term
 			rf.mu.RUnlock()
 			go rf.sendAppendEntries(k, &args, &reply)
 		}
 	}
 
+	rf.mu.RLock()
+	logLen := len(rf.log)-1
+	currTerm := rf.currentTerm
+	rf.mu.RUnlock()
+	go rf.CommitLog(logLen, currTerm)
+
 	select{
 	case <- rf.OutOfTimeCh:
-	case <- time.After(555* time.Millisecond):
+	case <- time.After((time.Duration(TimeOutCon))/8 * time.Millisecond):
 	}
 }
 
@@ -603,7 +638,6 @@ func (rf *Raft) CommitMonitor(applyCh chan ApplyMsg){
 				rf.mu.Lock()
 				defer rf.mu.Unlock()
 				oldApplied := rf.lastApplied
-//				fmt.Printf("%v %v,Apply from %v to %v\n",rf.State,rf.me,oldApplied+1,rf.cmtIndex)
 				for i:=oldApplied+1 ;i<= rf.cmtIndex;i++ {
 					if i> len(rf.log)-1{
 						return
@@ -611,6 +645,7 @@ func (rf *Raft) CommitMonitor(applyCh chan ApplyMsg){
 					appendMsg := ApplyMsg{Index: i, Command: rf.log[i].Command}
 					applyCh <- appendMsg
 					rf.lastApplied = i
+//					fmt.Printf("%v %v Apply Log: %v in Term %v\n",rf.State,rf.me,appendMsg,rf.currentTerm)
 				}
 				return
 			}()
