@@ -1,5 +1,7 @@
 //Lab 2A finished 2017/8/12
-//Lab 2A finished 2017/8/20
+//Lab 2B finished 2017/8/20
+//Lab 2C Pass all tests but Figure8Unreliable
+
 package raft
 
 //
@@ -24,6 +26,8 @@ import(
 	"labrpc"
 	"time"
 	"math/rand"
+	"bytes"
+	"encoding/gob"
 //	"fmt"
 )
 
@@ -129,6 +133,15 @@ func (rf *Raft) persist() {
 	// e.Encode(rf.yyy)
 	// data := w.Bytes()
 	// rf.persister.SaveRaftState(data)
+	w := new(bytes.Buffer)
+	e := gob.NewEncoder(w)
+	e.Encode(rf.currentTerm)
+	e.Encode(rf.log)
+	e.Encode(rf.cmtIndex)
+	e.Encode(rf.lastApplied)
+	e.Encode(rf.nextIndex)
+	data := w.Bytes()
+	rf.persister.SaveRaftState(data)
 }
 
 //
@@ -143,6 +156,19 @@ func (rf *Raft) readPersist(data []byte) {
 	// d.Decode(&rf.yyy)
 	if data == nil || len(data) < 1 { // bootstrap without any state?
 		return
+	}
+	r := bytes.NewBuffer(data)
+	d := gob.NewDecoder(r)
+	d.Decode(&rf.currentTerm)
+	d.Decode(&rf.log)
+	d.Decode(&rf.cmtIndex)
+	d.Decode(&rf.lastApplied)
+	d.Decode(&rf.nextIndex)
+	rf.State = "follower"
+	rf.votedFor = -1
+	if len(rf.log) == 0 {
+		firstLog := new(Entry) // initialize all nodes' Logs
+		rf.log = []Entry{*firstLog}
 	}
 }
 
@@ -326,6 +352,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 		reply.Term = rf.currentTerm
 		reply.Success = cdt
 		rf.mu.Unlock()
+		go rf.persist()
 	}
 }
 
@@ -467,6 +494,7 @@ func (rf *Raft) DispatchAppendEntries(server int, idx int) bool {
 
 func (rf *Raft) CommitLog(index int, currTerm int){
 	rf.mucmt.Lock()
+	go rf.persist()
 	var appmu sync.RWMutex 
 	appCount := 1
 	go func(){
@@ -648,6 +676,7 @@ func (rf *Raft) CommitMonitor(applyCh chan ApplyMsg){
 					rf.lastApplied = i
 //					fmt.Printf("%v %v Apply Log: %v in Term %v\n",rf.State,rf.me,appendMsg,rf.currentTerm)
 				}
+				go rf.persist()
 				return
 			}()
 		}
