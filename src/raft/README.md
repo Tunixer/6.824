@@ -180,4 +180,16 @@ func (rf *Raft) rectifyAppendEntries(server int,idx int) bool{
 	return ok
 }
 ```
+### 2.1 其余的实现的小细节
+我们需要注意的细节应该是在`Candidate`进行选举时不要忘记自己的一票。此外，`Leader`在发送`AppendEntries`的过程中需要过半数的认可才可以`Commit`，这里也别忘记了`Leader`自身也会认可自己。
 
+选举的过期时间和发送心跳包的间隔也是需要小心掌控的，我之前在`CandidateRt()`内没有注意调整选举过期，导致整个集群长时间没有`Leader`，使得整体之间长时间没有`Agreement`。
+
+因为这里牵扯到多线程和同步操作，框架本身提供的实现是希望利用互斥锁`sync.Mutex`来实现，但是Go语言本身给我们提供了读写锁`sync.RWMutex`，利用好读写锁能够避免花费大量时间用于调试和解除死锁。
+
+在检测心跳包时，也需要进行Consistency Check，否则依旧会导致记录不同步使得集群之间的`Agreement`不能达成。发送心跳包时，我选择的`PrevLogIndex`是当前的`CommitIndex`。
+### 3.0 Long Way to Go
+**2017.08.21**
+目前本程序能够通过Lab 2的Tester的大部分测试。
+除了无法通过`Figure8Unreliable`测试之外，`TestConcurrentStarts2B`测试大概有10%的概率不通过，在其余的测试中都较为稳健的通过了测试。
+由于目前本人还有考研的压力，实在无法抽出更多的时间来修改出稳健的程序，等未来有空之后会进一步改善目前的程序。
