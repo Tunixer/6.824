@@ -127,7 +127,9 @@ func (rf *Raft) LeaderRt(){
 我实现Consistency Check是采用在第一次`AppendEntriesRPC`失败之后，调用一个`rectifyAppendEntries()`,这一函数用于处理寻找到一致的`Log Entity`并且复制这之后的整个日志。
 
 值得一提的是，在实现这一系列完整的`AppendEntries`的功能时，我们依旧需要注意在1.1里所提到的自身的Term过期的问题。同时，我们在这里注意一点问题，就是当收到自己的Term过期的消息时，`Leader`会立刻退回`Follower`状态，这时候后面所需要执行的`AppendEntriesRPC`都不应该继续执行。
+
 我的实现如下:
+
 ```go
 func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
  	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
