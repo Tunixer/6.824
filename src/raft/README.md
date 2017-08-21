@@ -91,3 +91,91 @@ func (rf *Raft) LeaderRt(){
 }
 ```
 通过这样的同步过程，可以保证Leader Election的正确
+
+### 1.2 Log Replication
+在`Raft`协议里，最重要的就是保持状态机的一致性，而最主要的途径就是保证每个Server都能够正确地`Replicate`Leader的`log`。在协议中，保持这一一致性的具体实现是通过维护一个指向`log`的指针`CommitIndex`，在`CommitIndex`之前的`log`的内容是无法被改变的，也是可以安全的应用到状态机上去的，从而保持了各个服务器之间状态机的一致性。
+一个`Log Entry`只有在Leader所发送的`AppendEntriesRPC`被过半数的服务器所接受才能够被称之为`Commited`的`Log Entry`，只有`Commited`的`Log Entry`才能够被应用到状态机。
+
+服务器的接收Client的请求和自己发送`AppendEntriesRPC`应该保持各自独立，在我自己的实现里是这样做的:
+```go
+func (rf *Raft) Start(command interface{}) (int, int, bool) {
+    ......
+	if rf.State == "leader"{
+		appEntries := Entry{Term :rf.GetCurrTerm(),Command:command}
+		term = appEntries.Term
+		rf.log = append(rf.log, appEntries)
+		index = len(rf.log)-1
+	} else {
+		isLeader = false
+	}
+	return index, term, isLeader
+}
+func (rf *Raft) LeaderRt(){
+    ......//这里是执行发送心跳包的过程
+	rf.mu.RLock()
+	logLen := len(rf.log)-1
+	currTerm := rf.currentTerm
+	rf.mu.RUnlock()
+	go rf.CommitLog(logLen, currTerm)//CommitLog执行了发送AppendEntries的具体过程
+	......
+}
+```
+在`Raft`协议中为了保证大家的`Commit`的日志是同步的，采取了`Leader`overwrite `Follower`的`log`的方式，为了保证`Leader`的`AppendEntriesRPC`请求能够保证整个集群的日志的同步，接收`AppendEntriesRPC`的服务器需要保证两件事情，第一个是要保证`Candidate`的日志是相对更加`up-to-date`( Section 5.4.1)，否则就不能让`Candidate`被选成`Leader`。另一个则是需要保证`AppendEntriesRPC`是完全复制`Leader`的`log`,文章提出通过在进行添加新日志之前进行一次Consistency Check(Section 5.3)，只有通过Consistency Check才可以进行进一步的`AppendEntries`操作。一旦Leader的`AppendEntriesRPC`被拒绝了，Leader会不断的寻找之前的`Log Entity`,从能通过Consistency Check的那个`Entity`开始复制日志。
+
+### 1.3 Log Replication的实现难点
+我个人觉得这里实现的难点有两点，一点是如何实现`Leader`和`Follower`之间Consistency Check，另一点则是如何注意自身的Term过期的处理。
+我实现Consistency Check是采用在第一次`AppendEntriesRPC`失败之后，调用一个`rectifyAppendEntries()`,这一函数用于处理寻找到一致的`Log Entity`并且复制这之后的整个日志。
+
+值得一提的是，在实现这一系列完整的`AppendEntries`的功能时，我们依旧需要注意在1.1里所提到的自身的Term过期的问题。同时，我们在这里注意一点问题，就是当收到自己的Term过期的消息时，`Leader`会立刻退回`Follower`状态，这时候后面所需要执行的`AppendEntriesRPC`都不应该继续执行。
+我的实现如下:
+```go
+func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+ 	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
+ 	if ok{
+ 		rf.IsOutOfTime(reply.Term)//每次发送完都要注意自己的Term的过期问题
+ 	}
+ 	return ok
+}
+
+func (rf *Raft) rectifyAppendEntries(server int,idx int) bool{
+	i := idx
+	for {
+			reply := &AppendEntriesReply{}
+			rf.mu.RLock()
+			args := &AppendEntriesArgs{Term:rf.currentTerm,
+				                       LeaderId:     rf.me,
+				                       Entries:      rf.log[i:i+1],
+				                       PrevLogIndex: i-1,
+				                       PrevLogTerm:  rf.log[i-1].Term,
+				                       LeaderCommit: rf.cmtIndex,
+			                          }
+			rf.mu.RUnlock()
+			if rf.GetStt() != "leader"{//每次发送完RPC之后都要查看自己是否因为Term过期而落回Follower状态
+				return false
+			}
+			ok := rf.sendAppendEntries(server, args, reply)
+			if ok{
+				if reply.Success == true{
+					break
+				}
+			}
+			i = i-1
+	}
+	reply := &AppendEntriesReply{}
+	rf.mu.RLock()
+	args := &AppendEntriesArgs{Term:         rf.currentTerm,
+		                       LeaderId:     rf.me,
+		                       Entries:      rf.log[i+1:idx+1],
+		                       PrevLogIndex: i,
+		                       PrevLogTerm:  rf.log[i].Term,
+		                       LeaderCommit: rf.cmtIndex,
+	                          }
+	rf.mu.RUnlock()
+	if rf.GetStt() != "leader"{
+		return false
+	}
+	ok := rf.sendAppendEntries(server, args, reply)
+	return ok
+}
+```
+
