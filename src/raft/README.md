@@ -45,7 +45,9 @@ Leader Election个人认为实现的难点主要有两点：
 2.当自己落后于对方RPC的Term时，如何退出当前工作并退回Follower状态
 
 为了使得当server落后于对方的Term时立刻返回Follower状态，我在这里实现了一个函数`IsOutOfTime(thisTerm int)`，这个函数的要出现在两个位置，一个是处理RPC请求的函数，即`AppendEntries`和`RequestVote`两个函数，每次执行这两个函数时都要先执行`IsOutOfTime(thisTerm int)`，另一个位置则是请求即`AppendEntries`和`RequestVote`的函数
+ 
 比如在`AppendEntries`：
+
 ```go
 func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 	oot1, oot2 := rf.IsOutOfTime(args.Term)
