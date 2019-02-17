@@ -12,7 +12,7 @@ import (
 // scheduled on it.
 type DoTaskArgs struct {
 	JobName    string
-	File       string   // the file to process
+	File       string   // only for map, the input file
 	Phase      jobPhase // are we in mapPhase or reducePhase?
 	TaskNumber int      // this task's index in the current phase
 
@@ -30,7 +30,7 @@ type ShutdownReply struct {
 
 // RegisterArgs is the argument passed when a worker registers with the master.
 type RegisterArgs struct {
-	Worker string
+	Worker string // the worker's UNIX-domain socket name, i.e. its RPC address
 }
 
 // call() sends an RPC to the rpcname handler on server srv
@@ -38,15 +38,15 @@ type RegisterArgs struct {
 // reply in reply. the reply argument should be the address
 // of a reply structure.
 //
-// call() returns true if the server responded, and false
-// if call() was not able to contact the server. in particular,
-// reply's contents are valid if and only if call() returned true.
+// call() returns true if the server responded, and false if call()
+// received no reply from the server. reply's contents are valid if
+// and only if call() returned true.
 //
-// you should assume that call() will time out and return an
-// error after a while if it doesn't get a reply from the server.
+// you should assume that call() will time out and return
+// false after a while if it doesn't get a reply from the server.
 //
-// please use call() to send all RPCs, in master.go, mapreduce.go,
-// and worker.go.  please don't change this function.
+// please use call() to send all RPCs. please don't change this
+// function.
 //
 func call(srv string, rpcname string,
 	args interface{}, reply interface{}) bool {
