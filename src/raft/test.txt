@@ -1,0 +1,236 @@
+Test (2B): no agreement if too many followers disconnect ...
+Term 1: 0 transfer from follower to Follower because of OutOfTime
+Term 1: 1 transfer from follower to Follower because of OutOfTime
+Term 1: 4 transfer from follower to Follower because of OutOfTime
+Term 1: 3 transfer from follower to Follower because of OutOfTime
+Candidate 2 Become Leader at Term 1
+Term 1: Leader 2 commit Index 0 to Follower 0,false
+Term 1: Leader 2 commit Index 0 to Follower 1,false
+Term 1: Leader 2 commit Index 0 to Follower 4,false
+Term 1: Leader 2 commit Index 0 to Follower 3,false
+Term 2: 1 transfer from follower to Follower because of OutOfTime
+Term 2: 4 transfer from follower to Follower because of OutOfTime
+Candidate 3 Become Leader at Term 2
+Term 2: 0 transfer from follower to Follower because of OutOfTime
+Term 2: Leader 3 commit Index 0 to Follower 4,false
+Term 2: 2 transfer from leader to Follower because of OutOfTime
+Term 2: Leader 3 commit Index 0 to Follower 1,false
+Term 2: Leader 3 commit Index 0 to Follower 0,false
+Term 2: Leader 3 commit Index 0 to Follower 2,false
+follower 4 's Log [{0 <nil>}] in Term 2 Before Append Entries
+follower 4 's Log [{0 <nil>} {2 10}] in Term 2 After Append Entries From Leader 3 in Term:2
+follower 1 's Log [{0 <nil>}] in Term 2 Before Append Entries
+follower 1 's Log [{0 <nil>} {2 10}] in Term 2 After Append Entries From Leader 3 in Term:2
+follower 0 's Log [{0 <nil>}] in Term 2 Before Append Entries
+Term 2: Leader 3 commit Index 1 to Follower 1,true
+leader 3 's Log [{0 <nil>} {2 10}] in Term 2
+Term 2: Leader 3 commit Index 1 to Follower 4,true
+leader 3 's Log [{0 <nil>} {2 10}] in Term 2
+Leader 3 commit Index 1 to all Follower in Term 2, And CommitIdx is 1
+follower 2 's Log [{0 <nil>}] in Term 2 Before Append Entries
+follower 2 's Log [{0 <nil>} {2 10}] in Term 2 After Append Entries From Leader 3 in Term:2
+follower 0 's Log [{0 <nil>} {2 10}] in Term 2 After Append Entries From Leader 3 in Term:2
+leader 3 Apply Log: {true 10 1} in Term 2
+Term 2: Leader 3 commit Index 1 to Follower 0,true
+leader 3 's Log [{0 <nil>} {2 10}] in Term 2
+Term 2: Leader 3 commit Index 1 to Follower 2,true
+leader 3 's Log [{0 <nil>} {2 10}] in Term 2
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+follower 2 's Log [{0 <nil>} {2 10}] in Term 2 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+follower 1 's Log [{0 <nil>} {2 10}] in Term 2 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+follower 4 's Log [{0 <nil>} {2 10}] in Term 2 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+follower 1 Apply Log: {true 10 1} in Term 2
+follower 0 's Log [{0 <nil>} {2 10}] in Term 2 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+follower 2 Apply Log: {true 10 1} in Term 2
+follower 4 Apply Log: {true 10 1} in Term 2
+follower 0 Apply Log: {true 10 1} in Term 2
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 4,false
+Term 2: Leader 3 commit Index 1 to Follower 0,false
+Term 2: Leader 3 commit Index 1 to Follower 1,false
+Term 2: Leader 3 commit Index 1 to Follower 2,false
+follower 2 's Log [{0 <nil>} {2 10}] in Term 2 Before Append Entries
+follower 2 's Log [{0 <nil>} {2 10} {2 20}] in Term 2 After Append Entries From Leader 3 in Term:2
+Term 2: Leader 3 commit Index 2 to Follower 2,true
+leader 3 's Log [{0 <nil>} {2 10} {2 20}] in Term 2
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 1,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 1,false
+Term 2: Leader 3 commit Index 2 to Follower 1,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 1,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 4,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 1,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 0,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 2: Leader 3 commit Index 2 to Follower 2,false
+Term 7: 1 transfer from candidate to Follower because of OutOfTime
+Term 7: 3 transfer from leader to Follower because of OutOfTime
+Term 7: 2 transfer from follower to Follower because of OutOfTime
+Term 7: 0 transfer from candidate to Follower because of OutOfTime
+Candidate 4 Become Leader at Term 7
+Term 7: Leader 4 commit Index 1 to Follower 3,false
+Term 7: Leader 4 commit Index 1 to Follower 1,false
+Term 7: Leader 4 commit Index 1 to Follower 2,false
+Term 7: Leader 4 commit Index 1 to Follower 0,false
+Term 7: Leader 3 commit Index 2 to Follower 0,false
+Term 7: Leader 3 commit Index 2 to Follower 0,false
+Term 7: Leader 3 commit Index 2 to Follower 4,false
+Term 7: Leader 4 commit Index 1 to Follower 3,false
+Term 7: Leader 4 commit Index 1 to Follower 0,false
+Term 7: Leader 4 commit Index 1 to Follower 2,false
+Term 7: Leader 4 commit Index 1 to Follower 1,false
+Term 8: 4 transfer from leader to Follower because of OutOfTime
+Term 7: Leader 3 commit Index 2 to Follower 0,false
+Term 7: Leader 3 commit Index 2 to Follower 1,false
+Term 7: Leader 3 commit Index 2 to Follower 4,false
+Term 7: Leader 3 commit Index 2 to Follower 4,false
+Term 7: Leader 3 commit Index 2 to Follower 1,false
+Term 7: Leader 3 commit Index 2 to Follower 1,false
+Term 7: Leader 3 commit Index 2 to Follower 0,false
+Term 7: Leader 3 commit Index 2 to Follower 4,false
+Term 8: 2 transfer from follower to Follower because of OutOfTime
+Candidate 3 Become Leader at Term 8
+Term 8: Leader 3 commit Index 2 to Follower 4,false
+Term 8: Leader 3 commit Index 2 to Follower 1,false
+Term 8: Leader 3 commit Index 2 to Follower 0,false
+Term 8: Leader 3 commit Index 2 to Follower 2,false
+follower 4 's Log [{0 <nil>} {2 10}] in Term 8 Before Append Entries
+follower 4 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 2 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 Before Append Entries
+follower 2 's Log [{0 <nil>} {2 10} {2 20} {8 30}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 1 's Log [{0 <nil>} {2 10}] in Term 8 Before Append Entries
+follower 1 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 4 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 Before Append Entries
+follower 4 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 2 's Log [{0 <nil>} {2 10} {2 20} {8 30}] in Term 8 Before Append Entries
+follower 2 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 1 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 Before Append Entries
+follower 1 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 After Append Entries From Leader 3 in Term:8
+Term 8: Leader 3 commit Index 4 to Follower 2,true
+leader 3 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8
+Term 8: Leader 3 commit Index 4 to Follower 4,true
+leader 3 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8
+Leader 3 commit Index 4 to all Follower in Term 8, And CommitIdx is 4
+leader 3 Apply Log: {true 20 2} in Term 8
+follower 0 's Log [{0 <nil>} {2 10}] in Term 8 Before Append Entries
+follower 0 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 After Append Entries From Leader 3 in Term:8
+Term 8: Leader 3 commit Index 4 to Follower 1,true
+leader 3 Apply Log: {true 30 3} in Term 8
+leader 3 Apply Log: {true 1000 4} in Term 8
+leader 3 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8
+follower 0 's Log [{0 <nil>} {2 10} {2 20}] in Term 8 Before Append Entries
+follower 0 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 After Append Entries From Leader 3 in Term:8
+follower 0 Apply Log: {true 20 2} in Term 8
+Term 8: Leader 3 commit Index 4 to Follower 0,true
+follower 0 Apply Log: {true 30 3} in Term 8
+follower 0 Apply Log: {true 1000 4} in Term 8
+Term 8: Leader 3 commit Index 2 to Follower 1,false
+leader 3 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8
+Term 8: Leader 3 commit Index 2 to Follower 4,false
+Term 8: Leader 3 commit Index 2 to Follower 1,false
+Term 8: Leader 3 commit Index 4 to Follower 4,false
+Term 8: Leader 3 commit Index 4 to Follower 0,false
+Term 8: Leader 3 commit Index 4 to Follower 1,false
+Term 8: Leader 3 commit Index 4 to Follower 2,false
+follower 1 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 When HB
+ rf.cmtIndex:1 args.LeaderCommit:4
+follower 2 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 When HB
+ rf.cmtIndex:1 args.LeaderCommit:4
+follower 1 Apply Log: {true 20 2} in Term 8
+follower 4 's Log [{0 <nil>} {2 10} {2 20} {8 30} {8 1000}] in Term 8 When HB
+ rf.cmtIndex:1 args.LeaderCommit:4
+follower 1 Apply Log: {true 30 3} in Term 8
+follower 2 Apply Log: {true 20 2} in Term 8
+follower 1 Apply Log: {true 1000 4} in Term 8
+follower 4 Apply Log: {true 20 2} in Term 8
+follower 4 Apply Log: {true 30 3} in Term 8
+follower 4 Apply Log: {true 1000 4} in Term 8
+follower 2 Apply Log: {true 30 3} in Term 8
+follower 2 Apply Log: {true 1000 4} in Term 8
+  ... Passed --   3.6  5  422    4
+PASS
+ok  	raft	3.664s
