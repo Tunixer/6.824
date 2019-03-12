@@ -307,6 +307,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 		rf.heartbeatCh <- true
 		reply.Term = rf.GetCurrTerm()
 		rf.mu.Lock()
+		fmt.Printf("ID %v in term %v, receive heartbeat from Leader %v\n",rf.me,rf.currentTerm,args.LeaderId)
 		cdt := false
 		if len(rf.log) >= args.PrevLogIndex + 1 {
 			if rf.log[args.PrevLogIndex].Term == args.PrevLogTerm{
@@ -314,6 +315,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 			}
 		}
 		if rf.lastApplied < args.LeaderCommit && cdt {
+			//Use heartbeart to let client apply log according to master
 			fmt.Printf("%v %v 's Log %v in Term %v When HB\n rf.cmtIndex:%v args.LeaderCommit:%v\n",
 				rf.State,rf.me,rf.log,rf.currentTerm,rf.cmtIndex,args.LeaderCommit)
 			rf.cmtIndex = args.LeaderCommit
@@ -575,7 +577,7 @@ func (rf *Raft) Kill() {
 //
 
 func ElectTimeOut() int {
-	res := rand.Intn(50) + 400
+	res := rand.Intn(50) + 350
 	return res
 }
 
@@ -610,6 +612,7 @@ func (rf *Raft) CandidateRt(){
 
 	var args RequestVoteArgs
 	rf.mu.RLock()
+	fmt.Printf("ID %v: in term %v become a candidate\n",rf.me,rf.currentTerm)
 	args.CandidateId = rf.me
 	args.Term = rf.currentTerm
 	args.LastLogIndex = len(rf.log)-1
@@ -644,6 +647,7 @@ func (rf *Raft) LeaderRt(){
 	var args AppendEntriesArgs
 	args.LeaderId = rf.me
 	args.Term = rf.GetCurrTerm()
+	//Sent heartbeat to others
 	for k, _ := range rf.peers{
 		if k!= rf.me && rf.GetStt() == "leader"{
 			var reply AppendEntriesReply
@@ -660,11 +664,13 @@ func (rf *Raft) LeaderRt(){
 	logLen := len(rf.log)-1
 	currTerm := rf.currentTerm
 	rf.mu.RUnlock()
+	//CommitLog is used to rsync log to others
 	go rf.CommitLog(logLen, currTerm)
 
 	select{
 	case <- rf.OutOfTimeCh:
-	case <- time.After((time.Duration(TimeOutCon))/8 * time.Millisecond):
+	case <- time.After((time.Duration(TimeOutCon))/10 * time.Millisecond):
+		fmt.Printf("Leader %v Timeout\n",rf.me)
 	}
 }
 

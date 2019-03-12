@@ -1,0 +1,158 @@
+Test (2B): basic agreement ...
+Term 1: 4 transfer from follower to Follower because of OutOfTime
+Term 1: 2 transfer from follower to Follower because of OutOfTime
+Term 2: 3 transfer from candidate to Follower because of OutOfTime
+Term 2: 0 transfer from candidate to Follower because of OutOfTime
+Term 2: 1 transfer from candidate to Follower because of OutOfTime
+Candidate 2 Become Leader at Term 2
+Term 2: Leader 2 commit Index 0 to Follower 4,false
+Term 2: Leader 2 commit Index 0 to Follower 1,false
+Term 2: Leader 2 commit Index 0 to Follower 3,false
+Term 2: Leader 2 commit Index 0 to Follower 0,false
+candidate 4 's Log [{0 <nil>}] in Term 2 Before Append Entries
+candidate 4 's Log [{0 <nil>} {2 100}] in Term 2 After Append Entries From Leader 2 in Term:2
+follower 3 's Log [{0 <nil>}] in Term 2 Before Append Entries
+follower 3 's Log [{0 <nil>} {2 100}] in Term 2 After Append Entries From Leader 2 in Term:2
+Term 2: Leader 2 commit Index 1 to Follower 3,true
+leader 2 's Log [{0 <nil>} {2 100}] in Term 2
+follower 1 's Log [{0 <nil>}] in Term 2 Before Append Entries
+follower 1 's Log [{0 <nil>} {2 100}] in Term 2 After Append Entries From Leader 2 in Term:2
+follower 0 's Log [{0 <nil>}] in Term 2 Before Append Entries
+Term 2: Leader 2 commit Index 1 to Follower 4,true
+follower 0 's Log [{0 <nil>} {2 100}] in Term 2 After Append Entries From Leader 2 in Term:2
+leader 2 's Log [{0 <nil>} {2 100}] in Term 2
+Leader 2 commit Index 1 to all Follower in Term 2, And CommitIdx is 1
+leader 2 Apply Log: {true 100 1} in Term 2
+Term 2: Leader 2 commit Index 1 to Follower 1,true
+leader 2 's Log [{0 <nil>} {2 100}] in Term 2
+Term 2: Leader 2 commit Index 1 to Follower 0,true
+leader 2 's Log [{0 <nil>} {2 100}] in Term 2
+Term 2: Leader 2 commit Index 1 to Follower 4,false
+Term 2: Leader 2 commit Index 1 to Follower 0,false
+Term 2: Leader 2 commit Index 1 to Follower 3,false
+Term 2: Leader 2 commit Index 1 to Follower 1,false
+Term 2: Leader 2 commit Index 1 to Follower 4,false
+Term 2: Leader 2 commit Index 1 to Follower 0,false
+Term 2: Leader 2 commit Index 1 to Follower 1,false
+Term 2: Leader 2 commit Index 1 to Follower 3,false
+Term 2: Leader 2 commit Index 1 to Follower 4,false
+Term 2: Leader 2 commit Index 1 to Follower 0,false
+Term 2: Leader 2 commit Index 1 to Follower 1,false
+Term 2: Leader 2 commit Index 1 to Follower 3,false
+Term 2: Leader 2 commit Index 1 to Follower 4,false
+Term 2: Leader 2 commit Index 1 to Follower 0,false
+Term 2: Leader 2 commit Index 1 to Follower 1,false
+Term 2: Leader 2 commit Index 1 to Follower 3,false
+follower 3 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+Term 3: 2 transfer from leader to Follower because of OutOfTime
+follower 3 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:1 args.LeaderCommit:1
+follower 3 Apply Log: {true 100 1} in Term 3
+Term 3: 1 transfer from follower to Follower because of OutOfTime
+follower 0 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+Candidate 4 Become Leader at Term 3
+follower 0 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:1 args.LeaderCommit:1
+follower 1 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:0 args.LeaderCommit:1
+follower 0 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:1 args.LeaderCommit:1
+follower 1 's Log [{0 <nil>} {2 100}] in Term 3 When HB
+ rf.cmtIndex:1 args.LeaderCommit:1
+follower 0 Apply Log: {true 100 1} in Term 3
+follower 1 Apply Log: {true 100 1} in Term 3
+Term 4: 0 transfer from follower to Follower because of OutOfTime
+Term 4: 2 transfer from follower to Follower because of OutOfTime
+Term 4: 1 transfer from follower to Follower because of OutOfTime
+Candidate 3 Become Leader at Term 4
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+Term 4: Leader 3 commit Index 1 to Follower 4,false
+Term 4: Leader 3 commit Index 1 to Follower 1,false
+--- FAIL: TestBasicAgree2B (2.51s)
+	config.go:465: one(100) failed to reach agreement
+Term 4: Leader 3 commit Index 1 to Follower 0,false
+FAIL
+Term 4: Leader 3 commit Index 1 to Follower 2,false
+exit status 1
+FAIL	raft	2.516s
